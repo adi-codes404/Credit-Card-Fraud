@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credit Card Fraud Detection | Pipeline Walkthrough</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/atom-one-dark.min.css">
+<style>
+:root{
+  --navy:#1e2761; --navy2:#263080; --red:#e63946; --ice:#cadcfc;
+  --bg:#f4f6fb; --card:#fff; --ink:#1b2340; --muted:#5a6b87; --line:#e3e8f0;
+  --code:#282c34;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Segoe UI",system-ui,-apple-system,sans-serif;line-height:1.55}
+
+/* ---------- hero ---------- */
+.hero{background:var(--navy);color:#fff;padding:56px 24px 90px;position:relative;overflow:hidden}
+.hero::before,.hero::after{content:"";position:absolute;border-radius:50%;background:var(--navy2)}
+.hero::before{width:420px;height:420px;right:-120px;top:-160px}
+.hero::after{width:300px;height:300px;left:-100px;bottom:-170px}
+.wrap{max-width:1180px;margin:0 auto;position:relative;z-index:1}
+.eyebrow{color:var(--ice);font-size:13px;font-weight:700;letter-spacing:3px;text-transform:uppercase}
+.hero h1{font-family:Cambria,Georgia,serif;font-size:clamp(30px,5vw,50px);margin:10px 0 12px;line-height:1.1}
+.hero p{color:var(--ice);max-width:680px;font-size:17px;margin:0}
+.tags{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap}
+.tag{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);padding:6px 14px;border-radius:999px;font-size:13px;color:#fff}
+
+/* ---------- stats ---------- */
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-top:-52px;position:relative;z-index:2}
+.stat{background:var(--card);border-radius:16px;padding:20px;box-shadow:0 8px 24px rgba(30,39,97,.12);text-align:center}
+.stat b{display:block;font-family:Cambria,Georgia,serif;font-size:30px;color:var(--navy)}
+.stat span{font-size:13px;color:var(--muted)}
+.stat.red b{color:var(--red)}
+
+/* ---------- nav ---------- */
+nav{position:sticky;top:0;z-index:50;background:rgba(244,246,251,.92);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);margin-top:32px}
+nav .wrap{display:flex;gap:6px;overflow-x:auto;padding:10px 0}
+nav a{white-space:nowrap;text-decoration:none;color:var(--muted);font-size:14px;font-weight:600;padding:8px 14px;border-radius:999px}
+nav a:hover{background:#e8edf8;color:var(--navy)}
+nav a.active{background:var(--navy);color:#fff}
+.tools{margin-left:auto;display:flex;align-items:center}
+#toggleAll{border:0;background:var(--red);color:#fff;padding:8px 16px;border-radius:999px;font-weight:600;font-size:13px;cursor:pointer;white-space:nowrap}
+
+/* ---------- pipeline flow ---------- */
+.flow{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin:32px 0 8px}
+.flow a{background:var(--card);border-radius:14px;padding:16px;text-decoration:none;color:var(--ink);box-shadow:0 2px 10px rgba(30,39,97,.07);border:1px solid var(--line);transition:.2s}
+.flow a:hover{transform:translateY(-3px);box-shadow:0 8px 20px rgba(30,39,97,.14)}
+.flow i{font-style:normal;display:inline-flex;width:30px;height:30px;border-radius:50%;background:var(--red);color:#fff;align-items:center;justify-content:center;font-weight:700;font-size:14px;margin-bottom:8px}
+.flow strong{display:block;font-size:15px;color:var(--navy)}
+.flow small{color:var(--muted);font-size:12.5px}
+
+/* ---------- phases & cards ---------- */
+.phase{margin-top:44px;scroll-margin-top:70px}
+.phase-head{display:flex;align-items:center;gap:14px;margin-bottom:16px}
+.phase-num{width:46px;height:46px;border-radius:50%;background:var(--red);color:#fff;font-weight:700;font-size:20px;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 12px rgba(230,57,70,.35);flex-shrink:0}
+.phase-head h2{margin:0;font-family:Cambria,Georgia,serif;font-size:26px;color:var(--navy)}
+.phase-head p{margin:0;color:var(--muted);font-size:14px}
+
+.card{background:var(--card);border-radius:16px;padding:22px;margin-bottom:20px;box-shadow:0 4px 18px rgba(30,39,97,.07);border:1px solid var(--line)}
+.card-top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.step{background:var(--navy);color:#fff;font-size:12px;font-weight:700;padding:4px 11px;border-radius:999px;letter-spacing:.5px;white-space:nowrap}
+.card h3{margin:0;font-size:19px;color:var(--navy)}
+.grid{display:grid;grid-template-columns:1.15fr 1fr;gap:22px;align-items:start}
+.grid.solo{grid-template-columns:1fr}
+
+.codebox{background:var(--code);border-radius:12px;overflow:hidden;min-width:0}
+.codebar{display:flex;align-items:center;gap:6px;padding:10px 14px;background:#21252b;color:#8a93a6;font-size:12px}
+.dot{width:10px;height:10px;border-radius:50%}
+.dot:nth-child(1){background:#ff5f56}.dot:nth-child(2){background:#ffbd2e}.dot:nth-child(3){background:#27c93f}
+.codebar span{margin-left:8px;font-family:Consolas,monospace}
+.copy{margin-left:auto;background:#3a3f4b;color:#cfd6e6;border:0;border-radius:6px;padding:4px 10px;font-size:12px;cursor:pointer}
+.copy:hover{background:#4a5160}
+pre{margin:0;overflow:auto;max-height:380px}
+pre code{display:block;font-family:Consolas,"Courier New",monospace;font-size:13px;line-height:1.55;padding:16px!important;background:transparent!important;color:#abb2bf}
+
+.explain .why{background:#eef2ff;border-radius:12px;padding:14px 16px;margin:0 0 12px;color:var(--navy);font-size:15px}
+.explain .why b{display:block;font-size:11px;letter-spacing:2px;text-transform:uppercase;color:var(--red);margin-bottom:4px}
+.shot{width:100%;border-radius:10px;border:1px solid var(--line);cursor:zoom-in;display:block;background:#fff}
+.hide-code .codebox{display:none}
+.hide-code .grid{grid-template-columns:1fr}
+
+/* ---------- results ---------- */
+.panel{background:var(--card);border-radius:16px;padding:24px;margin-bottom:20px;box-shadow:0 4px 18px rgba(30,39,97,.07);border:1px solid var(--line)}
+.panel h3{margin:0 0 6px;font-size:21px;color:var(--navy);font-family:Cambria,Georgia,serif}
+.panel .sub{margin:0 0 16px;color:var(--muted);font-size:14px}
+.tblwrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;min-width:560px}
+th,td{padding:13px 12px;text-align:center;border-bottom:1px solid var(--line);font-size:15px}
+th{background:var(--navy);color:#fff;font-weight:600;font-size:13.5px}
+th:first-child{border-radius:10px 0 0 0;text-align:left}th:last-child{border-radius:0 10px 0 0}
+td:first-child{text-align:left;font-weight:600;color:var(--navy)}
+td.best{background:#ffe9eb;color:var(--red);font-weight:700}
+.legend{margin-top:10px;font-size:13px;color:var(--muted)}
+.legend em{font-style:normal;background:#ffe9eb;color:var(--red);padding:2px 8px;border-radius:6px;font-weight:600}
+
+.tabs{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.tab{border:1px solid var(--line);background:#fff;color:var(--muted);padding:8px 16px;border-radius:999px;font-weight:600;font-size:14px;cursor:pointer}
+.tab.on{background:var(--navy);border-color:var(--navy);color:#fff}
+.cmrow{display:grid;grid-template-columns:minmax(0,420px) 1fr;gap:24px;align-items:center}
+#cmImg{width:100%;border-radius:10px;border:1px solid var(--line);background:#fff}
+#cmNote{font-size:15px;color:var(--ink)}
+#cmNote .n{display:flex;gap:10px;margin-bottom:10px}
+#cmNote .n b{min-width:92px;color:var(--navy)}
+
+.insights{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.insight{background:var(--card);border-radius:14px;padding:18px;border:1px solid var(--line);box-shadow:0 2px 10px rgba(30,39,97,.06)}
+.insight h4{margin:0 0 6px;color:var(--navy);font-size:16px}
+.insight p{margin:0;color:var(--muted);font-size:14px}
+.insight .big{font-family:Cambria,Georgia,serif;font-size:28px;color:var(--red);display:block;margin-bottom:2px}
+.callout{background:var(--navy);color:#fff;border-radius:16px;padding:22px 26px;margin-top:20px;font-size:16px}
+.callout b{color:#ffb3b9}
+
+footer{text-align:center;color:var(--muted);font-size:13px;padding:40px 16px 50px}
+
+/* lightbox */
+#lb{position:fixed;inset:0;background:rgba(10,14,35,.88);display:none;align-items:center;justify-content:center;z-index:100;padding:24px;cursor:zoom-out}
+#lb img{max-width:100%;max-height:100%;border-radius:10px;background:#fff}
+
+@media(max-width:900px){
+  .stats,.flow,.insights{grid-template-columns:1fr 1fr}
+  .grid,.cmrow{grid-template-columns:1fr}
+  .tools{display:none}
+}
+@media(max-width:560px){.stats,.flow,.insights{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">DE&amp;VL Mini Project</div>
+    <h1>Credit Card Fraud Detection</h1>
+    <p>An end-to-end data science pipeline. Every step shows the code, why we wrote it, and what it produced.</p>
+    <div class="tags">
+      <span class="tag">Python</span><span class="tag">Pandas / NumPy</span><span class="tag">Seaborn / Matplotlib</span><span class="tag">Scikit-learn</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="stats">
+    <div class="stat"><b>284,807</b><span>Transactions (raw)</span></div>
+    <div class="stat red"><b>~0.17%</b><span>Are fraudulent</span></div>
+    <div class="stat"><b>4</b><span>Models compared</span></div>
+    <div class="stat red"><b id="bestF1">–</b><span id="bestF1Label">Best F1-score</span></div>
+  </div>
+</div>
+
+<nav>
+  <div class="wrap">
+    <a href="#p1">1 · Loading</a>
+    <a href="#p2">2 · Preprocessing</a>
+    <a href="#p3">3 · EDA</a>
+    <a href="#p4">4 · Features &amp; Stats</a>
+    <a href="#p5">5 · Models</a>
+    <a href="#results">Results</a>
+    <div class="tools"><button id="toggleAll">Hide all code</button></div>
+  </div>
+</nav>
+
+<main class="wrap">
+  <div class="flow">
+    <a href="#p1"><i>1</i><strong>Load &amp; Summarise</strong><small>Shape, types, class balance</small></a>
+    <a href="#p2"><i>2</i><strong>Preprocess</strong><small>Clean, encode, scale</small></a>
+    <a href="#p3"><i>3</i><strong>Explore</strong><small>Plots &amp; outliers</small></a>
+    <a href="#p4"><i>4</i><strong>Select Features</strong><small>Correlation, t-test, ANOVA</small></a>
+    <a href="#p5"><i>5</i><strong>Model</strong><small>Train &amp; evaluate</small></a>
+  </div>
+
+  <div id="steps"></div>
+
+  <section class="phase" id="results">
+    <div class="phase-head">
+      <div class="phase-num">★</div>
+      <div><h2>Results</h2><p>How the four models performed on the held-out test set</p></div>
+    </div>
+
+    <div class="panel">
+      <h3>Model Comparison</h3>
+      <p class="sub">Best value in each column is highlighted.</p>
+      <div class="tblwrap" id="tableBox"></div>
+      <p class="legend"><em>highlight</em> = best score in that metric</p>
+    </div>
+
+    <div class="panel">
+      <h3>Confusion Matrices</h3>
+      <p class="sub">Pick a model to see where it gets fraud right and wrong.</p>
+      <div class="tabs" id="tabs"></div>
+      <div class="cmrow">
+        <img id="cmImg" alt="confusion matrix" onerror="this.style.display='none'">
+        <div id="cmNote"></div>
+      </div>
+    </div>
+
+    <div class="insights" id="insights"></div>
+
+    <div class="callout">
+      <b>Why not accuracy?</b> A model that predicts "legitimate" for every transaction already scores about 99.8%
+      while catching zero fraud. That's why we judge models on <b>precision, recall and F1</b>.
+    </div>
+  </section>
+</main>
+
+<footer>Credit Card Fraud Detection · DE&amp;VL Mini Project · Built with Python &amp; Scikit-learn</footer>
+
+<div id="lb"><img alt=""></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+<script>
+/* ================= DATA (embedded: no fetch needed) ================= */
+const STEPS = [{"phase":1,"title":"Load the dataset","code":"df = pd.read_csv(DATA_PATH)","why":"Loads the credit card transaction CSV file into a Pandas DataFrame for analysis."},{"phase":1,"title":"Inspect records and structure","code":"print(df.head())\nprint(df.tail())\nprint(f\"Shape: {df.shape}\")\ndf.info()","why":"Inspects the first/last records, dimensions, and data types to understand the schema."},{"phase":1,"title":"Check missing values and class distribution","code":"print(df.isnull().sum())\nprint(df[\"Class\"].value_counts())\nprint(f\"Fraud rate: {(df['Class'] == 1).mean() * 100:.4f}%\")","why":"Identifies any missing data and highlights the severe class imbalance between legitimate and fraudulent transactions."},{"phase":2,"title":"Clean missing values and duplicates","code":"df = df.dropna()\ndf = df.drop_duplicates().reset_index(drop=True)","why":"Ensures data integrity by dropping missing records and removing duplicate rows."},{"phase":2,"title":"Validate numerical ranges and convert types","code":"df = df[df[\"Amount\"] >= 0].reset_index(drop=True)\ndf[\"Class\"] = df[\"Class\"].astype(\"int8\")\ndf[\"Time_delta\"] = pd.to_timedelta(df[\"Time\"], unit=\"s\")","why":"Filters out anomalous negative transaction amounts and converts time seconds into timedeltas."},{"phase":2,"title":"Create derived features","code":"df[\"Hour\"] = (df[\"Time_delta\"].dt.total_seconds() // 3600 % 24).astype(int)\ndf[\"Amount_log\"] = np.log1p(df[\"Amount\"])\nQ1, Q3 = df[\"Amount\"].quantile(0.25), df[\"Amount\"].quantile(0.75)\nIQR = Q3 - Q1\nlower, upper = Q1 - 1.5 * IQR, Q3 + 1.5 * IQR\ndf[\"is_high_value\"] = ((df[\"Amount\"] < lower) | (df[\"Amount\"] > upper)).astype(int)","why":"Extracts the hour of day, applies a log transformation to reduce Amount skewness, and flags high-value outliers using the IQR rule."},{"phase":2,"title":"Build and encode categorical features","code":"ord_enc = OrdinalEncoder(categories=[amount_order])\ndf[\"Amount_Category_enc\"] = ord_enc.fit_transform(df[[\"Amount_Category\"]])\nohe = OneHotEncoder(sparse_output=False, dtype=int)\ntod_encoded = ohe.fit_transform(df[[\"Time_of_Day\"]])","why":"Categorizes time of day and transaction amounts into bins, then applies ordinal and one-hot encoding."},{"phase":2,"title":"Standardize numerical data","code":"scaler = StandardScaler()\ndf[[\"Time_scaled\", \"Amount_scaled\"]] = scaler.fit_transform(df[[\"Time\", \"Amount\"]])","why":"Scales continuous numerical features (Time and Amount) to have a mean of 0 and variance of 1."},{"phase":3,"title":"Visualize target variable distribution","code":"plt.figure(figsize=(7, 5))\nax = sns.countplot(x=\"Class\", data=df, palette=[\"tab:green\", \"tab:red\"])\nax.set_yscale(\"log\")\nplt.savefig(\"outputs/01_class_dist.png\", dpi=120, bbox_inches=\"tight\")","why":"Visualizes the extreme class imbalance on a logarithmic scale.","image":"outputs/01_class_dist.png"},{"phase":3,"title":"Plot feature distributions (Time and Amount)","code":"fig, axes = plt.subplots(1, 3, figsize=(18, 5))\nsns.histplot(df[\"Time\"], bins=50, kde=True, ax=axes[0])\nsns.histplot(df[\"Amount\"], bins=50, kde=True, ax=axes[1])\nsns.histplot(df[\"Amount_log\"], bins=50, kde=True, ax=axes[2])\nplt.savefig(\"outputs/02_featureDist.png\", dpi=120, bbox_inches=\"tight\")","why":"Examines the raw distributions of Time and Amount alongside the log-transformed Amount.","image":"outputs/02_featureDist.png"},{"phase":3,"title":"Plot KDE for top V features split by class","code":"top_v = [\"V14\", \"V17\", \"V12\", \"V10\"]\nfig, axes = plt.subplots(2, 2, figsize=(12, 8))\nfor ax, col in zip(axes.ravel(), top_v):\n    sns.kdeplot(df.loc[df[\"Class\"] == 0, col], label=\"Legit\", fill=True, ax=ax)\n    sns.kdeplot(df.loc[df[\"Class\"] == 1, col], label=\"Fraud\", fill=True, ax=ax)\n    ax.set_title(f\"{col} by Class\")\n    ax.legend()\nplt.savefig(\"outputs/03_kde.png\", dpi=120, bbox_inches=\"tight\")","why":"Compares the probability density functions of key PCA features for legitimate vs. fraudulent transactions.","image":"outputs/03_kde.png"},{"phase":3,"title":"Numerical vs Target boxplots","code":"fig, axes = plt.subplots(1, 4, figsize=(18, 5))\nsns.boxplot(x=\"Class\", y=\"Amount\", data=df, ax=axes[0])\naxes[0].set_yscale(\"symlog\")\nfor ax, col in zip(axes[1:], [\"V14\", \"V17\", \"V12\"]):\n    sns.boxplot(x=\"Class\", y=col, data=df, ax=ax)\n    ax.set_title(f\"{col} vs Class\")\nplt.savefig(\"outputs/04_numerical_vs_target_boxplots.png\", dpi=120, bbox_inches=\"tight\")","why":"Highlights median shifts and outliers in Amount and top V features between classes.","image":"outputs/04_numerical_vs_target_boxplots.png"},{"phase":3,"title":"Scatter plot of V14 vs V17","code":"sns.scatterplot(x=\"V14\", y=\"V17\", hue=\"Class\", data=sample_df, alpha=0.6)\nplt.savefig(\"outputs/05_v14_v17_scatterplot.png\", dpi=120, bbox_inches=\"tight\")","why":"Visualizes feature separability between fraud and sampled legitimate points in a 2D PCA subspace.","image":"outputs/05_v14_v17_scatterplot.png"},{"phase":3,"title":"Categorical vs Target count plots","code":"fig, axes = plt.subplots(1, 2, figsize=(14, 5))\nsns.countplot(x=\"Time_of_Day\", hue=\"Class\", data=df, ax=axes[0])\nsns.countplot(x=\"Amount_Category\", hue=\"Class\", data=df, ax=axes[1])\nplt.savefig(\"outputs/06_categorical_vs_target_countplots.png\", dpi=120, bbox_inches=\"tight\")","why":"Examines how fraud counts vary across different times of day and transaction amount categories.","image":"outputs/06_categorical_vs_target_countplots.png"},{"phase":3,"title":"Outlier detection box plots","code":"fig, axes = plt.subplots(1, 2, figsize=(14, 5))\nsns.boxplot(x=df[\"Amount\"], ax=axes[0])\nsns.boxplot(data=df[[f\"V{i}\" for i in range(1, 15)]], ax=axes[1], orient=\"h\")\nplt.savefig(\"outputs/07_outlier_detection_boxplots.png\", dpi=120, bbox_inches=\"tight\")","why":"Identifies extreme outliers across Amount and the first 14 principal components.","image":"outputs/07_outlier_detection_boxplots.png"},{"phase":4,"title":"Create interaction features","code":"df[\"V14_x_V17\"] = df[\"V14\"] * df[\"V17\"]\ndf[\"V12_x_V14\"] = df[\"V12\"] * df[\"V14\"]\ndf[\"V10_x_V12\"] = df[\"V10\"] * df[\"V12\"]\ndf[\"V17_x_Amount\"] = df[\"V17\"] * df[\"Amount_scaled\"]","why":"Generates non-linear interaction terms to boost model predictive power."},{"phase":4,"title":"Generate correlation heatmap and bar chart","code":"corr = df[feature_cols + [\"Class\"]].corr()\nsns.heatmap(corr, cmap=\"coolwarm\", center=0)\nplt.savefig(\"outputs/08_correlation_heatmap.png\", dpi=120, bbox_inches=\"tight\")\nclass_corr = corr[\"Class\"].drop(\"Class\").sort_values(key=abs, ascending=False)\nclass_corr.head(15).sort_values().plot(kind=\"barh\", color=\"steelblue\")\nplt.savefig(\"outputs/09_feature_correlation_bar.png\", dpi=120, bbox_inches=\"tight\")","why":"Visualizes linear relationships and identifies features most strongly correlated with fraud.","image":"outputs/09_feature_correlation_bar.png"},{"phase":4,"title":"Statistical significance testing (Welch t-test)","code":"for col in feature_cols:\n    t_stat, p_val = stats.ttest_ind(fraud[col], legit[col], equal_var=False)","why":"Performs Welch's t-test to rigorously check whether feature means differ significantly between classes."},{"phase":4,"title":"Select top features using ANOVA F-test","code":"selector = SelectKBest(score_func=f_classif, k=15)\nselector.fit(df[feature_cols], df[\"Class\"])\nplt.savefig(\"outputs/10_anova_fscore_bar.png\", dpi=120, bbox_inches=\"tight\")","why":"Ranks and selects the top predictive features using univariate ANOVA F-scores.","image":"outputs/10_anova_fscore_bar.png"},{"phase":5,"title":"Train-test split and sub-sampling","code":"X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42, stratify=y)\nlegit_idx = y_train[y_train == 0].sample(n=min(20000, (y_train == 0).sum()), random_state=42).index\nfraud_idx = y_train[y_train == 1].index\nsub_idx = legit_idx.union(fraud_idx)\nX_train_sub, y_train_sub = X_train.loc[sub_idx], y_train.loc[sub_idx]","why":"Splits data into stratified train/test sets and creates a balanced training subset for models sensitive to class imbalance."},{"phase":5,"title":"Train and evaluate machine learning models","code":"models = {\n  \"Logistic Regression\": (LogisticRegression(max_iter=1000, class_weight=\"balanced\"), False),\n  \"Random Forest\": (RandomForestClassifier(n_estimators=100, class_weight=\"balanced\"), False),\n  \"SVM (RBF)\": (SVC(kernel=\"rbf\", class_weight=\"balanced\"), True),\n  \"KNN\": (KNeighborsClassifier(n_neighbors=5), True)\n}\nfor name, (model, use_sub) in models.items():\n    Xt, yt = (X_train_sub, y_train_sub) if use_sub else (X_train, y_train)\n    model.fit(Xt, yt)\n    y_pred = model.predict(X_test)","why":"Trains multiple classifiers with balanced class weights and evaluates them across precision, recall, F1, and ROC-AUC."},{"phase":5,"title":"Compare model performance metrics","code":"results_df = pd.DataFrame(results).set_index(\"Model\").round(4)\nresults_df.plot(kind=\"bar\", figsize=(12, 6))\nplt.savefig(\"outputs/11_model_performance_comparison.png\", dpi=120, bbox_inches=\"tight\")","why":"Compares overall model performance to determine the best approach for fraud detection.","image":"outputs/11_model_performance_comparison.png"},{"phase":5,"title":"Plot confusion matrices","code":"fig, axes = plt.subplots(2, 2, figsize=(11, 9))\nfor ax, (name, y_pred) in zip(axes.ravel(), predictions.items()):\n    cm = confusion_matrix(y_test, y_pred)\n    sns.heatmap(cm, annot=True, fmt=\"d\", cmap=\"Blues\", ax=ax)\nplt.savefig(\"outputs/12_confusion_matrices.png\", dpi=120, bbox_inches=\"tight\")","why":"Visualizes true positives, false positives, true negatives, and false negatives for each classifier.","image":"outputs/12_confusion_matrices.png"},{"phase":5,"title":"Evaluate Random Forest feature importance","code":"importances = pd.Series(trained[\"Random Forest\"].feature_importances_, index=selected_features).sort_values(ascending=False)\nplt.savefig(\"outputs/13_random_forest_feature_importance.png\", dpi=120, bbox_inches=\"tight\")","why":"Extracts and visualizes the most influential features driving the Random Forest model's predictions.","image":"outputs/13_random_forest_feature_importance.png"},{"phase":5,"title":"Export results and conclude","code":"results_df.to_json(\"outputs/results.json\", orient=\"index\")","why":"Exports evaluation metrics to JSON and summarizes model findings, emphasizing F1-score and Recall over raw accuracy."}];
+
+const RESULTS = {
+  "Logistic Regression": {"Accuracy":0.9762,"Precision":0.0631,"Recall":0.9082,"F1-Score":0.1180,"ROC-AUC":0.9712},
+  "Random Forest":       {"Accuracy":0.9995,"Precision":0.9383,"Recall":0.7755,"F1-Score":0.8492,"ROC-AUC":0.9485},
+  "SVM (RBF)":           {"Accuracy":0.9884,"Precision":0.1205,"Recall":0.8878,"F1-Score":0.2122,"ROC-AUC":0.9768},
+  "KNN":                 {"Accuracy":0.9984,"Precision":0.5517,"Recall":0.8163,"F1-Score":0.6584,"ROC-AUC":0.9315}
+};
+const CM = [
+  {key:"lr",  name:"Logistic Regression", note:"Catches the most fraud (recall 90.8%) but precision is only 6.3%: roughly 15 false alarms for every real fraud. Too noisy to use alone."},
+  {key:"rf",  name:"Random Forest",       note:"Best balance. 93.8% of flagged transactions are truly fraud, and it still catches 77.6% of all fraud. Highest F1 (0.849)."},
+  {key:"svm", name:"SVM (RBF)",           note:"High recall (88.8%) but low precision (12.1%). Trained on a sampled subset, so many legitimate transactions get flagged."},
+  {key:"knn", name:"KNN",                 note:"Decent middle ground: 55.2% precision and 81.6% recall (F1 0.658), but clearly behind Random Forest."}
+];
+const PHASES = {
+  1:["Data Loading & Summary","Understand the shape, types and class balance"],
+  2:["Preprocessing & Transformation","Clean, convert, engineer, encode and scale"],
+  3:["Data Exploration (EDA)","Visualise distributions, relationships and outliers"],
+  4:["Feature Engineering & Statistics","Interactions, correlation, t-test and ANOVA selection"],
+  5:["Machine Learning Models","Split, train, evaluate and compare classifiers"]
+};
+
+/* ================= helpers ================= */
+const esc = s => String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const $ = id => document.getElementById(id);
+
+/* ================= render steps ================= */
+(function(){
+  let html = "", last = 0, n = 0;
+  STEPS.forEach(s=>{
+    if(s.phase !== last){
+      if(last) html += "</section>";
+      html += `<section class="phase" id="p${s.phase}">
+        <div class="phase-head"><div class="phase-num">${s.phase}</div>
+        <div><h2>${PHASES[s.phase][0]}</h2><p>${PHASES[s.phase][1]}</p></div></div>`;
+      last = s.phase;
+    }
+    n++;
+    const img = s.image ? `<img class="shot" src="${s.image}" alt="${esc(s.title)}" loading="lazy" onerror="this.style.display='none'">` : "";
+    html += `<article class="card">
+      <div class="card-top"><span class="step">STEP ${n}</span><h3>${esc(s.title)}</h3></div>
+      <div class="grid">
+        <div class="codebox">
+          <div class="codebar"><i class="dot"></i><i class="dot"></i><i class="dot"></i><span>python</span>
+            <button class="copy" type="button">Copy</button></div>
+          <pre><code class="language-python">${esc(s.code)}</code></pre>
+        </div>
+        <div class="explain">
+          <p class="why"><b>Why we did this</b>${esc(s.why)}</p>
+          ${img}
+        </div>
+      </div></article>`;
+  });
+  if(last) html += "</section>";
+  $("steps").innerHTML = html;
+  try{ if(window.hljs) hljs.highlightAll(); }catch(e){}
+})();
+
+/* ================= copy buttons ================= */
+document.addEventListener("click", e=>{
+  const b = e.target.closest(".copy");
+  if(!b) return;
+  const code = b.closest(".codebox").querySelector("code").innerText;
+  const done = ()=>{ b.textContent="Copied!"; setTimeout(()=>b.textContent="Copy",1400); };
+  (navigator.clipboard ? navigator.clipboard.writeText(code) : Promise.reject()).then(done).catch(()=>{
+    const t=document.createElement("textarea"); t.value=code; document.body.appendChild(t); t.select();
+    try{document.execCommand("copy");}catch(_){} t.remove(); done();
+  });
+});
+
+/* ================= show/hide code ================= */
+$("toggleAll").addEventListener("click", ()=>{
+  document.body.classList.toggle("hide-code");
+  $("toggleAll").textContent = document.body.classList.contains("hide-code") ? "Show all code" : "Hide all code";
+});
+
+/* ================= results table ================= */
+(function(){
+  const models = Object.keys(RESULTS), cols = Object.keys(RESULTS[models[0]]);
+  const best = {}; cols.forEach(c=> best[c] = Math.max(...models.map(m=>RESULTS[m][c])));
+  let t = "<table><tr><th>Model</th>"+cols.map(c=>`<th>${c}</th>`).join("")+"</tr>";
+  models.forEach(m=>{
+    t += `<tr><td>${m}</td>`+cols.map(c=>{
+      const v = RESULTS[m][c];
+      return `<td class="${v===best[c]?"best":""}">${v.toFixed(4)}</td>`;
+    }).join("")+"</tr>";
+  });
+  $("tableBox").innerHTML = t+"</table>";
+  const bm = models.reduce((a,b)=> RESULTS[a]["F1-Score"]>=RESULTS[b]["F1-Score"]?a:b);
+  $("bestF1").textContent = RESULTS[bm]["F1-Score"].toFixed(3);
+  $("bestF1Label").textContent = "Best F1 · " + bm;
+})();
+
+/* ================= confusion matrix tabs ================= */
+(function(){
+  $("tabs").innerHTML = CM.map((c,i)=>`<button class="tab ${i?"":"on"}" data-i="${i}" type="button">${c.name}</button>`).join("");
+  function show(i){
+    const c = CM[i], r = RESULTS[c.name];
+    $("cmImg").style.display = ""; $("cmImg").src = `outputs/cm_${c.key}.png`;
+    $("cmNote").innerHTML =
+      `<div class="n"><b>Precision</b><span>${(r.Precision*100).toFixed(1)}%</span></div>
+       <div class="n"><b>Recall</b><span>${(r.Recall*100).toFixed(1)}%</span></div>
+       <div class="n"><b>F1-score</b><span>${r["F1-Score"].toFixed(3)}</span></div>
+       <p>${c.note}</p>`;
+    document.querySelectorAll(".tab").forEach((t,j)=>t.classList.toggle("on", j===i));
+  }
+  $("tabs").addEventListener("click", e=>{ const b=e.target.closest(".tab"); if(b) show(+b.dataset.i); });
+  show(0);
+})();
+
+/* ================= insights ================= */
+$("insights").innerHTML = `
+  <div class="insight"><span class="big">${RESULTS["Random Forest"]["F1-Score"].toFixed(3)}</span><h4>Best overall: Random Forest</h4><p>Highest F1, with 93.8% precision. Most flagged transactions really are fraud.</p></div>
+  <div class="insight"><span class="big">${(RESULTS["Logistic Regression"].Recall*100).toFixed(1)}%</span><h4>Highest recall: Logistic Regression</h4><p>Catches the most fraud, but its 6.3% precision floods analysts with false alarms.</p></div>
+  <div class="insight"><span class="big">Trade-off</span><h4>Precision vs recall</h4><p>A bank picks the balance: missed fraud costs money, false alarms cost customer trust.</p></div>`;
+
+/* ================= active nav link on scroll ================= */
+(function(){
+  const links = [...document.querySelectorAll("nav a")];
+  const secs = links.map(a=>document.querySelector(a.getAttribute("href"))).filter(Boolean);
+  function upd(){
+    let cur = 0; const y = window.scrollY + 120;
+    secs.forEach((s,i)=>{ if(s.offsetTop <= y) cur = i; });
+    links.forEach((a,i)=>a.classList.toggle("active", i===cur));
+  }
+  window.addEventListener("scroll", upd, {passive:true}); upd();
+})();
+
+/* ================= lightbox ================= */
+document.addEventListener("click", e=>{
+  const im = e.target.closest(".shot");
+  if(im){ $("lb").querySelector("img").src = im.src; $("lb").style.display="flex"; }
+  else if(e.target.closest("#lb")){ $("lb").style.display="none"; }
+});
+</script>
+</body>
+</html>
